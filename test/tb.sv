@@ -13,18 +13,18 @@ module tb ();
     #1;
   end
 
-  // Wire up the inputs and outputs:
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
+  // Wire up the inputs and outputs using SystemVerilog:
+  logic clk;
+  logic rst_n;
+  logic ena;
+  logic [7:0] ui_in;
+  logic [7:0] uio_in;
+  logic [7:0] uo_out;
+  logic [7:0] uio_out;
+  logic [7:0] uio_oe;
 `ifdef GL_TEST
-  wire VPWR = 1'b1;
-  wire VGND = 1'b0;
+  logic VPWR = 1'b1;
+  logic VGND = 1'b0;
 `endif
 
   // Replace tt_um_example with your module name:
