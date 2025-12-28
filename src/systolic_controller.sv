@@ -1,0 +1,119 @@
+module systolic_controller(
+    input  logic [7:0] ui_in,    // Dedicated inputs
+    output logic [7:0] uo_out,   // Dedicated outputs
+    input  logic [7:0] uio_in,   // IOs: Input path
+    output logic [7:0] uio_out,  // IOs: Output path
+    output logic [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
+    input  logic       ena,      // always 1 when the design is powered, so you can ignore it
+    input  logic       clk,      // clock
+    input  logic       rst_n     // reset_n - low to reset
+);
+
+// Control signals for systolic array
+logic [3:0] pe_acc_en;   
+logic [3:0] pe_weight_en;
+logic [3:0] pe_bias_en;    
+logic [1:0] drain_sel;
+
+logic [15:0] raw_acc_out;
+
+// Instantiate the systolic array
+systolic_array sa_inst (
+    .clk           (clk),
+    .rst_n         (rst_n),
+    .data_in       (ui_in),
+    .weight_in     (ui_in),
+    .bias_in       (ui_in),
+    .pe_acc_en     (pe_acc_en),
+    .pe_weight_en  (pe_weight_en),
+    .pe_bias_en    (pe_bias_en),
+    .drain_sel     (drain_sel),
+    .final_acc_out (raw_acc_out)
+);
+
+assign uo_out  = raw_acc_out[7:0];
+assign uio_out = raw_acc_out[15:8];
+assign uio_oe  = 8'b11111111;
+
+typedef enum logic [2:0] {IDLE, LOAD_W, LOAD_B, COMPUTE, DRAIN} state_t;
+state_t state, next_state;
+logic [2:0] cycle_count;
+
+// Combinational logic for next state
+always_comb begin
+    next_state = state;
+    
+    case (state)
+        IDLE: begin
+            next_state = LOAD_W;
+        end
+        LOAD_W: begin
+            if (cycle_count == 3'd3) begin
+                next_state = LOAD_B;
+            end
+        end
+        LOAD_B: begin
+            if (cycle_count == 3'd3) begin
+                next_state = COMPUTE;
+            end
+        end
+        COMPUTE: begin
+            if (cycle_count == 3'd6) begin
+                next_state = DRAIN;
+            end
+        end
+        DRAIN: begin
+            next_state = IDLE;
+        end
+        default: next_state = IDLE;
+    endcase
+end
+
+// Combinational logic for control signals
+always_comb begin
+    pe_acc_en = 4'b0000;
+    pe_weight_en = 4'b0000;
+    pe_bias_en = 4'b0000;
+    drain_sel = 2'b00;
+
+    case (state)
+        LOAD_W: begin
+            pe_weight_en[cycle_count[1:0]] = 1'b1;
+        end
+        LOAD_B: begin
+            pe_bias_en[cycle_count[1:0]] = 1'b1;
+        end
+        COMPUTE: begin
+            for (int i = 0; i < 4; i++) begin
+                if (cycle_count >= 3'(i) && cycle_count < 3'(i + 4))
+                    pe_acc_en[i] = 1'b1;
+            end
+        end
+        DRAIN: begin
+            drain_sel = cycle_count[1:0];
+        end
+        default: begin
+        end
+    endcase
+end
+
+// Sequential logic
+always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        state <= IDLE;
+        cycle_count <= 3'd0;
+    end else begin
+        state <= next_state;
+        
+        case (state)
+            LOAD_W, LOAD_B, COMPUTE: begin
+                cycle_count <= cycle_count + 3'd1;
+            end
+            default: begin
+                cycle_count <= 3'd0;
+            end
+        endcase
+    end
+end
+
+endmodule

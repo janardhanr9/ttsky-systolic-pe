@@ -1,34 +1,33 @@
-# Tiny Tapeout Vector ALU Project
+# Tiny Tapeout 09: 1D Systolic MAC Chain
 
 ## Architecture Overview
 
-This is a **Tiny Tapeout** project for creating a **vector ALU** (Arithmetic Logic Unit) design synthesized onto real silicon ASICs. The design flow:
+This is a **Tiny Tapeout 09** project implementing a **1D Systolic MAC (Multiply-Accumulate) Chain** with **4 Processing Elements (PEs)**.
+The design targets the **Sky130** process and is written in **SystemVerilog**.
+
+The design flow:
 1. SystemVerilog source in [src/](../src/) → RTL simulation → Gate-level synthesis → ASIC fabrication via LibreLane
 2. GitHub Actions automatically build GDS files for chip fabrication
 3. All designs use the standardized `tt_um_*` top module interface with fixed I/O ports
 
 **Key constraints**: 
-- Targets ~167x108 µM silicon tiles (1x1 default, expandable to 8x2)
-- 8-bit I/O buses: `ui_in[7:0]`, `uo_out[7:0]`, `uio_in/out[7:0]` (bidirectional)
-- **Use SystemVerilog** (`.sv` extension) for modern features like `logic`, `always_ff`, `always_comb`
-
-**Vector ALU Design Considerations**:
-- With 8-bit I/O, consider serial/pipelined vector element processing
-- Define vector width, element size, and supported operations early
-- Use `uio_*` bidirectional pins for operand input or result output expansion
-- Clock domain: Single clock (`clk`), active-low async reset (`rst_n`)
+- **Weight-Stationary**: Weights are loaded once and held stationary in the PEs.
+- **Deterministic**: No stalls, no handshaking (valid/ready). The design operates on fixed latency.
+- **Topology**: 1D Chain of 4 PEs.
+- **Math**: 8-bit signed integer arithmetic.
+- **Area**: 1 Tile (~167x108 µM).
 
 ## Critical Module Interface
 
 All designs **must** use this exact top module signature. Use **SystemVerilog syntax** (`.sv` files):
 
 ```systemverilog
-module tt_um_<your_unique_name> (
-    input  logic [7:0] ui_in,    // Dedicated 8-bit input
-    output logic [7:0] uo_out,   // Dedicated 8-bit output
-    input  logic [7:0] uio_in,   // Bidirectional I/O: input path
-    output logic [7:0] uio_out,  // Bidirectional I/O: output path
-    output logic [7:0] uio_oe,   // Bidirectional I/O: enable (0=input, 1=output)
+module tt_um_<your_unique_name>_systolic_array (
+    input  logic [7:0] ui_in,    // Data Inputs (Weights / Activations)
+    output logic [7:0] uo_out,   // Data Outputs (Results)
+    input  logic [7:0] uio_in,   // Control Signals (Mode, Reset, etc.)
+    output logic [7:0] uio_out,  // Status / Debug
+    output logic [7:0] uio_oe,   // Bidirectional Enable (0=input, 1=output)
     input  logic       ena,      // Always 1 when powered
     input  logic       clk,      // Clock input
     input  logic       rst_n     // Active-low reset
@@ -106,19 +105,18 @@ Default format is FST (compressed). For VCD: edit `tb.v` to use `$dumpfile("tb.v
 - **SPDX headers**: Include copyright/license at top of files (Apache-2.0 for TT projects)
 - **Documentation**: [docs/info.md](../docs/info.md) auto-generates the project datasheet on tinytapeout.com
 
-## Vector ALU Implementation Tips
+## Implementation Tips
 
-- **Serial processing**: With 8-bit I/O, implement operations on vector elements sequentially across multiple clock cycles
-- **Control interface**: Reserve some `ui_in` bits for operation selection (e.g., ADD, SUB, MUL, shift, etc.)
-- **State machine**: Use an FSM to manage multi-cycle vector operations (IDLE → LOAD → COMPUTE → OUTPUT)
-- **Register file**: Store vector operands in internal registers; use `uio_in`/`uio_out` for data transfer
-- **Example protocol**: `ui_in[2:0]` = opcode, `ui_in[7:3]` = control flags, then stream data via `uio_in`
+- **PE Design**: Create a `pe` module and instantiate it 4 times.
+- **Data Widths**: 8-bit inputs. Accumulators may need to be wider (e.g., 16-20 bits) to prevent overflow during the chain, then truncated/saturated at the output.
+- **Control**: Use `uio_in` to switch between "Load Weights" and "Compute" modes.
+- **Verification**: Ensure the testbench verifies the deterministic latency of the chain.
 
 ## Quick Start Checklist
 
-1. Rename `src/project.v` to `src/project.sv` and update module name to `tt_um_<yourusername>_vector_alu`
+1. Rename `src/project.v` to `src/project.sv` and update module name to `tt_um_<yourusername>_systolic_array`
 2. Update `info.yaml`: title, author, description, top_module, language = "SystemVerilog", source_files = ["project.sv"], pinout labels
-3. Implement vector ALU logic in [src/project.sv](../src/project.sv) using SystemVerilog syntax
+3. Implement systolic array logic in src/project.sv using SystemVerilog syntax
 4. Update [test/Makefile](../test/Makefile) `PROJECT_SOURCES` to `project.sv`
 5. Write tests in [test/test.py](../test/test.py) and update [test/tb.v](../test/tb.v) module name
 6. Run `cd test && make -B` to verify RTL simulation passes
