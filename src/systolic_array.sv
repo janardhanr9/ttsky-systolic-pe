@@ -1,18 +1,18 @@
 module systolic_array(
-    input logic [7:0] data_in,
-    output logic [15:0] final_acc_out,
+    input logic [3:0] data_in,
+    output logic [7:0] final_acc_out,
     input logic clk,
     input logic rst_n,
-    input logic [7:0] weight_in,
-    input logic [7:0] bias_in,
+    input logic [3:0] weight_in,
+    input logic [3:0] bias_in,
     input logic [3:0] pe_acc_en,   
     input logic [3:0] pe_weight_en,
     input logic [3:0] pe_bias_en,    
     input logic [1:0] drain_sel
 );
 
-logic [7:0] data_chain [0:3];
-logic [15:0] acc_chain [0:3];
+logic [3:0] data_chain [0:3];
+logic [7:0] acc_chain [0:3];
 
 generate 
     genvar i;
@@ -34,13 +34,13 @@ endgenerate
 
 always_comb begin
         // Default assignment to avoid any potential latch inference
-        final_acc_out = 16'b0;
+        final_acc_out = 8'b0;
         case (drain_sel)
             2'b00: final_acc_out = acc_chain[0];
             2'b01: final_acc_out = acc_chain[1];
             2'b10: final_acc_out = acc_chain[2];
             2'b11: final_acc_out = acc_chain[3];
-            default: final_acc_out = 16'b0;
+            default: final_acc_out = 8'b0;
         endcase
     end
 

@@ -1,27 +1,27 @@
 module systolic_pe (
-    input logic [7:0] data_in,
-    output logic [7:0] data_out,
+    input logic [3:0] data_in,
+    output logic [3:0] data_out,
     input logic clk,
     input logic rst_n,
-    input logic [7:0] weight_in,
-    input logic [7:0] bias_in,
-    output logic [15:0] acc_out,
+    input logic [3:0] weight_in,
+    input logic [3:0] bias_in,
+    output logic [7:0] acc_out,
     input logic acc_w_en,
     input logic weight_en,
     input logic bias_en
 );
 
-    logic signed [15:0] accumulator;
-    logic signed [7:0] weight;
-    logic signed [7:0] pass_through_data;
+    logic signed [7:0] accumulator;
+    logic signed [3:0] weight;
+    logic signed [3:0] pass_through_data;
 
     assign acc_out = accumulator;
     assign data_out = pass_through_data;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin 
-            accumulator <= 16'b0;
-            weight <= 8'b0;
+            accumulator <= 8'b0;
+            weight <= 4'b0;
         end else begin
             pass_through_data <= data_in;
             // load
@@ -29,10 +29,18 @@ module systolic_pe (
                 weight <= weight_in;
             end
             if (bias_en) begin
-                accumulator <= {{8{bias_in[7]}}, bias_in}; // sign-extend 8-bit bias into 16-bit accumulator
+                accumulator <= {{4{bias_in[3]}}, bias_in}; // sign-extend 4-bit bias into 8-bit accumulator
             end
             if (acc_w_en) begin
-                accumulator <= accumulator + (data_in * weight);
+                logic signed [8:0] mac_result;
+                mac_result = accumulator + (data_in * weight);
+                // Saturate to 8-bit range
+                if (mac_result > 9'sd127)
+                    accumulator <= 8'sd127;
+                else if (mac_result < -9'sd128)
+                    accumulator <= -8'sd128;
+                else
+                    accumulator <= mac_result[7:0];
             end
         end
     end

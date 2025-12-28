@@ -15,15 +15,15 @@ logic [3:0] pe_weight_en;
 logic [3:0] pe_bias_en;    
 logic [1:0] drain_sel;
 
-logic [15:0] raw_acc_out;
+logic [7:0] raw_acc_out;
 
 // Instantiate the systolic array
 systolic_array sa_inst (
     .clk           (clk),
     .rst_n         (rst_n),
-    .data_in       (ui_in),
-    .weight_in     (ui_in),
-    .bias_in       (ui_in),
+    .data_in       (ui_in[3:0]),
+    .weight_in     (ui_in[3:0]),
+    .bias_in       (ui_in[3:0]),
     .pe_acc_en     (pe_acc_en),
     .pe_weight_en  (pe_weight_en),
     .pe_bias_en    (pe_bias_en),
@@ -31,12 +31,12 @@ systolic_array sa_inst (
     .final_acc_out (raw_acc_out)
 );
 
-assign uo_out  = raw_acc_out[7:0];
-assign uio_out = raw_acc_out[15:8];
-assign uio_oe  = 8'b11111111;
+assign uo_out  = raw_acc_out;
+assign uio_out = 8'b0;
+assign uio_oe  = 8'b0;  // Configure as inputs (not used)
 
-// Suppress warnings for unused inputs
-logic _unused = &{ena, uio_in, 1'b0};
+// Suppress warnings for unused inputs and outputs
+logic _unused = &{ena, uio_in, ui_in[7:4], uio_out, 1'b0};
 
 typedef enum logic [2:0] {IDLE, LOAD_W, LOAD_B, COMPUTE, DRAIN} state_t;
 state_t state, next_state;
