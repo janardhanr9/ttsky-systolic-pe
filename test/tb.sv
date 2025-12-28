@@ -23,8 +23,8 @@ module tb ();
   logic [7:0] uio_out;
   logic [7:0] uio_oe;
 `ifdef GL_TEST
-  logic VPWR = 1'b1;
-  logic VGND = 1'b0;
+  wire VPWR = 1'b1;
+  wire VGND = 1'b0;
 `endif
 
   // Replace tt_um_example with your module name:
