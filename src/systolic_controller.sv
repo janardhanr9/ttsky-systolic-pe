@@ -35,6 +35,9 @@ assign uo_out  = raw_acc_out[7:0];
 assign uio_out = raw_acc_out[15:8];
 assign uio_oe  = 8'b11111111;
 
+// Suppress warnings for unused inputs
+logic _unused = &{ena, uio_in, 1'b0};
+
 typedef enum logic [2:0] {IDLE, LOAD_W, LOAD_B, COMPUTE, DRAIN} state_t;
 state_t state, next_state;
 logic [2:0] cycle_count;
