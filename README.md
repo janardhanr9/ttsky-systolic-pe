@@ -1,13 +1,13 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Tiny Tapeout 09: 1D Systolic MAC Chain
+# Tiny Tapeout 09: 8-Stage Systolic Array
 
 - [Read the documentation for project](docs/info.md)
 
 ## Project Overview
 
-This is a SystemVerilog implementation of a **1D Systolic MAC Chain (4 PEs)** for Tiny Tapeout 09.
-It features a **Weight-Stationary** architecture with **Deterministic** timing and **4-bit signed** arithmetic.
+This is a SystemVerilog implementation of a **1D Systolic Array with 8 Processing Elements (PEs)** for Tiny Tapeout 09.
+It features a **Weight-Stationary** architecture with **Deterministic** timing and **4-bit signed** arithmetic with **8-bit accumulators**.
 
 ## What is Tiny Tapeout?
 
