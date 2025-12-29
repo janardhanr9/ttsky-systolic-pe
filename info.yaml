@@ -1,9 +1,9 @@
 # Tiny Tapeout project information
 project:
-  title:        "Vector ALU"      # Project title
+  title:        "8-Stage Systolic Array"      # Project title
   author:       "Janardhan Raghunathan"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A SystemVerilog arithmetic logic unit for vector operations"      # One line description of what your project does
+  description:  "A SystemVerilog 8-stage systolic array for MAC operations"      # One line description of what your project does
   language:     "SystemVerilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     50000000       # Clock frequency in Hz (or 0 if not applicable)
 

@@ -29,17 +29,17 @@ async def test_systolic_fsm_states(dut):
     dut._log.info("Checking IDLE -> LOAD_W")
     await ClockCycles(dut.clk, 1)
 
-    # Should be in LOAD_W for 4 cycles (0-3)
+    # Should be in LOAD_W for 8 cycles (0-7)
     dut._log.info("In LOAD_W state")
-    await ClockCycles(dut.clk, 4)
+    await ClockCycles(dut.clk, 8)
 
     # Should transition to LOAD_B
     dut._log.info("Should be in LOAD_B state")
-    await ClockCycles(dut.clk, 4)
+    await ClockCycles(dut.clk, 8)
 
     # Should transition to COMPUTE
     dut._log.info("Should be in COMPUTE state")
-    await ClockCycles(dut.clk, 7)
+    await ClockCycles(dut.clk, 15)
 
     # Should transition to DRAIN
     dut._log.info("Should be in DRAIN state")
@@ -50,7 +50,7 @@ async def test_systolic_fsm_states(dut):
 
 @cocotb.test()
 async def test_weight_loading(dut):
-    """Test weight loading into all 4 PEs"""
+    """Test weight loading into all 8 PEs"""
     dut._log.info("Testing Weight Loading")
 
     clock = Clock(dut.clk, 10, unit="us")
@@ -68,8 +68,8 @@ async def test_weight_loading(dut):
     # Wait to enter LOAD_W state
     await ClockCycles(dut.clk, 1)
 
-    # Load weights: W0=1, W1=2, W2=3, W3=4
-    weights = [1, 2, 3, 4]
+    # Load weights: W0=1, W1=2, W2=3, W3=4, W4=5, W5=6, W6=7, W7=1
+    weights = [1, 2, 3, 4, 5, 6, 7, 1]
     for i, w in enumerate(weights):
         dut.ui_in.value = w
         dut._log.info(f"Loading weight {w} into PE{i}")
@@ -80,7 +80,7 @@ async def test_weight_loading(dut):
 
 @cocotb.test()
 async def test_bias_loading(dut):
-    """Test bias loading into all 4 PEs"""
+    """Test bias loading into all 8 PEs"""
     dut._log.info("Testing Bias Loading")
 
     clock = Clock(dut.clk, 10, unit="us")
@@ -95,12 +95,12 @@ async def test_bias_loading(dut):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
 
-    # Skip through LOAD_W state (4 cycles after IDLE transition)
+    # Skip through LOAD_W state (8 cycles after IDLE transition)
     await ClockCycles(dut.clk, 1)  # Enter LOAD_W
-    await ClockCycles(dut.clk, 4)  # Complete LOAD_W
+    await ClockCycles(dut.clk, 8)  # Complete LOAD_W
 
-    # Now in LOAD_B state - load biases: B0=10, B1=20, B2=30, B3=40
-    biases = [10, 20, 30, 40]
+    # Now in LOAD_B state - load biases
+    biases = [10, 20, 30, 40, 50, 60, 70, 1]
     for i, b in enumerate(biases):
         dut.ui_in.value = b
         dut._log.info(f"Loading bias {b} into PE{i}")
@@ -124,24 +124,24 @@ async def test_signed_stress_corners(dut):
 
     # 1. LOAD WEIGHTS: Set all PEs to -1 (Two's complement: 255)
     await ClockCycles(dut.clk, 1) # Enter LOAD_W
-    for _ in range(4):
+    for _ in range(8):
         dut.ui_in.value = 0xFF # -1 in signed 8-bit
         await ClockCycles(dut.clk, 1)
 
     # 2. LOAD BIASES: Set all PEs to 10
-    for _ in range(4):
+    for _ in range(8):
         dut.ui_in.value = 10
         await ClockCycles(dut.clk, 1)
 
     # 3. COMPUTE: Feed activations of 5
     # Math: (5 * -1) + 10 = 5. Result should be 5 across the board.
-    for _ in range(7):
+    for _ in range(15):
         dut.ui_in.value = 5
         await ClockCycles(dut.clk, 1)
 
     # 4. DRAIN and Validate
     dut._log.info("Draining Signed Results")
-    for i in range(4):
+    for i in range(8):
         # Combine high and low bytes
         raw_val = int(dut.uo_out.value) | (int(dut.uio_out.value) << 8)
         
@@ -177,21 +177,21 @@ async def test_simple_computation(dut):
     # Enter LOAD_W state
     await ClockCycles(dut.clk, 1)
 
-    # Load weights: W0=2, W1=3, W2=4, W3=5
-    weights = [2, 3, 4, 5]
+    # Load weights: W0=2, W1=3, W2=4, W3=5, W4=6, W5=7, W6=1, W7=2
+    weights = [2, 3, 4, 5, 6, 7, 1, 2]
     for w in weights:
         dut.ui_in.value = w
         await ClockCycles(dut.clk, 1)
 
-    # Load biases: B0=0, B1=0, B2=0, B3=0 (for simplicity)
-    biases = [0, 0, 0, 0]
+    # Load biases: B0=0, B1=0, ... (for simplicity)
+    biases = [0, 0, 0, 0, 0, 0, 0, 0]
     for b in biases:
         dut.ui_in.value = b
         await ClockCycles(dut.clk, 1)
 
     # Now in COMPUTE state - feed data
-    # Data sequence: [10, 20, 30, 40]
-    data_seq = [10, 20, 30, 40, 0, 0, 0]  # 7 cycles for COMPUTE
+    # Data sequence: [10, 20, 30, 40, 50, 60, 70, 1]
+    data_seq = [10, 20, 30, 40, 50, 60, 70, 1, 0, 0, 0, 0, 0, 0, 0]  # 15 cycles for COMPUTE
     for i, d in enumerate(data_seq):
         dut.ui_in.value = d
         dut._log.info(f"Compute cycle {i}: feeding data={d}")
@@ -202,9 +202,10 @@ async def test_simple_computation(dut):
     # PE1: (10*3) + (20*3) = 30 + 60 = 90
     # PE2: (10*4) + (20*4) + (30*4) = 240
     # PE3: (10*5) + (20*5) + (30*5) + (40*5) = 500
+    # PE4-7: similar calculations
     
     dut._log.info("Draining results")
-    for i in range(4):
+    for i in range(8):
         result = int(dut.uo_out.value) | (int(dut.uio_out.value) << 8)
         dut._log.info(f"PE{i} accumulated result: {result}")
         await ClockCycles(dut.clk, 1)
@@ -236,17 +237,17 @@ async def test_full_cycle(dut):
         await ClockCycles(dut.clk, 1)
         
         # Load weights
-        for i in range(4):
+        for i in range(8):
             dut.ui_in.value = (cycle + 1) * (i + 1)
             await ClockCycles(dut.clk, 1)
         
         # Load biases
-        for i in range(4):
+        for i in range(8):
             dut.ui_in.value = i * 5
             await ClockCycles(dut.clk, 1)
         
         # Compute phase
-        for i in range(7):
+        for i in range(15):
             dut.ui_in.value = i * 10
             await ClockCycles(dut.clk, 1)
         

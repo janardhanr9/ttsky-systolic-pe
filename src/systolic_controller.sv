@@ -10,10 +10,10 @@ module systolic_controller(
 );
 
 // Control signals for systolic array
-logic [3:0] pe_acc_en;   
-logic [3:0] pe_weight_en;
-logic [3:0] pe_bias_en;    
-logic [1:0] drain_sel;
+logic [7:0] pe_acc_en;   
+logic [7:0] pe_weight_en;
+logic [7:0] pe_bias_en;    
+logic [2:0] drain_sel;
 
 logic [7:0] raw_acc_out;
 
@@ -40,7 +40,7 @@ logic _unused = &{ena, uio_in, ui_in[7:4], uio_out, 1'b0};
 
 typedef enum logic [2:0] {IDLE, LOAD_W, LOAD_B, COMPUTE, DRAIN} state_t;
 state_t state, next_state;
-logic [2:0] cycle_count;
+logic [3:0] cycle_count;
 
 // Combinational logic for next state
 always_comb begin
@@ -51,17 +51,17 @@ always_comb begin
             next_state = LOAD_W;
         end
         LOAD_W: begin
-            if (cycle_count == 3'd3) begin
+            if (cycle_count == 4'd7) begin
                 next_state = LOAD_B;
             end
         end
         LOAD_B: begin
-            if (cycle_count == 3'd3) begin
+            if (cycle_count == 4'd7) begin
                 next_state = COMPUTE;
             end
         end
         COMPUTE: begin
-            if (cycle_count == 3'd6) begin
+            if (cycle_count == 4'd14) begin
                 next_state = DRAIN;
             end
         end
@@ -74,26 +74,26 @@ end
 
 // Combinational logic for control signals
 always_comb begin
-    pe_acc_en = 4'b0000;
-    pe_weight_en = 4'b0000;
-    pe_bias_en = 4'b0000;
-    drain_sel = 2'b00;
+    pe_acc_en = 8'b00000000;
+    pe_weight_en = 8'b00000000;
+    pe_bias_en = 8'b00000000;
+    drain_sel = 3'b000;
 
     case (state)
         LOAD_W: begin
-            pe_weight_en[cycle_count[1:0]] = 1'b1;
+            pe_weight_en[cycle_count[2:0]] = 1'b1;
         end
         LOAD_B: begin
-            pe_bias_en[cycle_count[1:0]] = 1'b1;
+            pe_bias_en[cycle_count[2:0]] = 1'b1;
         end
         COMPUTE: begin
-            for (int i = 0; i < 4; i++) begin
-                if (cycle_count >= 3'(i) && cycle_count < 3'(i + 4))
+            for (int i = 0; i < 8; i++) begin
+                if (cycle_count >= 4'(i) && cycle_count < 4'(i + 8))
                     pe_acc_en[i] = 1'b1;
             end
         end
         DRAIN: begin
-            drain_sel = cycle_count[1:0];
+            drain_sel = cycle_count[2:0];
         end
         default: begin
         end
@@ -104,16 +104,16 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         state <= IDLE;
-        cycle_count <= 3'd0;
+        cycle_count <= 4'd0;
     end else begin
         state <= next_state;
         
         case (state)
             LOAD_W, LOAD_B, COMPUTE: begin
-                cycle_count <= cycle_count + 3'd1;
+                cycle_count <= cycle_count + 4'd1;
             end
             default: begin
-                cycle_count <= 3'd0;
+                cycle_count <= 4'd0;
             end
         endcase
     end
