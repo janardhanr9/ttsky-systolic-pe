@@ -6,8 +6,8 @@
 
 ## Project Overview
 
-This is a SystemVerilog implementation of a **1D Systolic MAC Chain (4 PEs)** (Tiny Tapeout 09).
-It features a **Weight-Stationary** architecture with **Deterministic** timing and **8-bit signed** arithmetic.
+This is a SystemVerilog implementation of a **1D Systolic MAC Chain (4 PEs)** for Tiny Tapeout 09.
+It features a **Weight-Stationary** architecture with **Deterministic** timing and **4-bit signed** arithmetic.
 
 ## What is Tiny Tapeout?
 
